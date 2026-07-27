@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches package versions
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          for pkg in packages/core/package.json packages/resource-client/package.json packages/mod/package.json; do
+            version=$(node -p "require('./$pkg').version")
+            if [ "$version" != "$tag" ]; then
+              echo "::error::$pkg ($version) mismatch ($tag)"
+              exit 1
+            fi
+          done
+
+  publish-npm:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish to npm
+        run: pnpm -r --filter @bc-studio/oauth-core --filter @bc-studio/oauth-resource-client publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  release-script:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build script
+        run: STUDIO_OAUTH_VERSION="${GITHUB_REF_NAME#v}" pnpm --filter @bc-studio/oauth-mod build
+
+      - name: Attach script to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: packages/mod/dist/studio-oauth.js
+          generate_release_notes: true

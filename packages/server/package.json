@@ -1,0 +1,20 @@
+{
+  "name": "bc-studio-oauth-server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "genkey": "node scripts/genkey.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@bc-studio/oauth-core": "workspace:*"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

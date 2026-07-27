@@ -1,0 +1,40 @@
+{
+  "name": "@bc-studio/oauth-resource-client",
+  "version": "0.1.0",
+  "description": "BC Studio OAuth 资源服务器端验证库",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "bcauth-keygen": "./bin/keygen.mjs"
+  },
+  "files": [
+    "src",
+    "bin"
+  ],
+  "keywords": [
+    "bondage-club",
+    "oauth",
+    "authentication",
+    "resource-server"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bondage-studio/studio-oauth.git",
+    "directory": "packages/resource-client"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "keygen": "node bin/keygen.mjs"
+  },
+  "dependencies": {
+    "@bc-studio/oauth-core": "workspace:*"
+  }
+}

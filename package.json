@@ -1,0 +1,18 @@
+{
+  "name": "bc-studio-oauth-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.5.2",
+  "scripts": {
+    "build": "pnpm --filter @bc-studio/oauth-mod build",
+    "genkey": "pnpm --filter bc-studio-oauth-server genkey",
+    "dev": "pnpm --filter bc-studio-oauth-server dev",
+    "deploy": "pnpm --filter bc-studio-oauth-server deploy"
+  },
+  "devDependencies": {
+    "@bc-studio/oauth-mod": "workspace:*",
+    "@bc-studio/oauth-resource-client": "workspace:*",
+    "bc-studio-oauth-server": "workspace:*"
+  }
+}

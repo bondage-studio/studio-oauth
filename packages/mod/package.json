@@ -1,0 +1,19 @@
+{
+  "name": "@bc-studio/oauth-mod",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "dependencies": {
+    "@bc-studio/oauth-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-replace": "^6.0.3",
+    "@rollup/plugin-terser": "^1.0.0",
+    "bc-stubs": "^130.0.0",
+    "rollup": "^4.62.2"
+  }
+}

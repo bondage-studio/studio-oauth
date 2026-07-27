@@ -1,0 +1,30 @@
+{
+  "name": "@bc-studio/oauth-core",
+  "version": "0.1.0",
+  "description": "BC Studio OAuth 协议实现,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "keywords": [
+    "bondage-club",
+    "oauth",
+    "ed25519",
+    "jws"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bondage-studio/studio-oauth.git",
+    "directory": "packages/core"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
