@@ -1,7 +1,7 @@
 {
   "name": "@bc-studio/oauth-core",
   "version": "0.1.0",
-  "description": "BC Studio OAuth 协议实现,
+  "description": "BC Studio OAuth 协议实现",
   "type": "module",
   "exports": {
     ".": "./src/index.js"
