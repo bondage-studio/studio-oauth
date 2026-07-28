@@ -239,6 +239,13 @@ function createStudioOauth({issuer = __STUDIO_OAUTH_ISSUER__}: { issuer?: string
     return {login, header};
 }
 
-const modApi = waitForModSdk().then((sdk) => sdk.registerMod(MOD_INFO, {allowReplace: true}));
-modApi.catch((error: Error) => console.warn(`[${MOD_INFO.fullName}] mod registration failed:`, error.message));
-globalThis.studioOauth = createStudioOauth();
+if (globalThis.studioOauth == null) {
+    const modApi = waitForModSdk()
+      .then((sdk) =>
+        sdk.registerMod(MOD_INFO, {allowReplace: true})
+      );
+    modApi.catch((error: Error) =>
+      console.warn(`[${MOD_INFO.fullName}] mod registration failed:`, error.message)
+    );
+    globalThis.studioOauth = createStudioOauth();
+}
