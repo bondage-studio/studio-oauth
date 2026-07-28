@@ -26,8 +26,8 @@ type RouteHandler = (ctx: RouteContext) => Response | Promise<Response>;
 
 const CORS = {
     'access-control-allow-origin': '*',
-    'access-control-allow-headers': '*',
-    'access-control-allow-methods': 'GET,POST,OPTIONS',
+    'access-control-allow-headers': 'Authorization, Content-Type',
+    'access-control-allow-methods': 'GET, PUT, DELETE, OPTIONS',
 };
 
 const DEFAULT_TOKEN_TTL = 3600;

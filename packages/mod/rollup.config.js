@@ -27,5 +27,6 @@ export default {
         }),
         nodeResolve({extensions: ['.ts', '.mjs', '.js']}),
         esbuild({target: 'es2022'}),
+        terser(),
     ],
 };
