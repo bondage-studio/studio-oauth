@@ -1,11 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true,
+    "outDir": "dist",
+    "rootDir": "src",
     "lib": ["ES2022", "DOM"]
   },
-  "include": [
-    "src",
-    "node_modules/bc-stubs/bc/**/*.d.ts"
-  ]
+  "include": ["src"]
 }

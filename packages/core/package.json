@@ -1,13 +1,18 @@
 {
   "name": "@bc-studio/oauth-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "BC Studio OAuth 协议实现",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
   "files": [
-    "src"
+    "dist"
   ],
   "keywords": [
     "bondage-club",
@@ -23,6 +28,11 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
   },
   "publishConfig": {
     "access": "public"

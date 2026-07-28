@@ -1,13 +1,14 @@
 {
   "name": "bc-studio-oauth-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "private": true,
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "genkey": "node scripts/genkey.mjs",
+    "typecheck": "tsc --noEmit",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },
@@ -15,6 +16,7 @@
     "@bc-studio/oauth-core": "workspace:*"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260714.1",
     "wrangler": "^4.0.0"
   }
 }

@@ -1,10 +1,11 @@
 {
   "name": "@bc-studio/oauth-mod",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@bc-studio/oauth-core": "workspace:*"
@@ -14,6 +15,7 @@
     "@rollup/plugin-replace": "^6.0.3",
     "@rollup/plugin-terser": "^1.0.0",
     "bc-stubs": "^130.0.0",
-    "rollup": "^4.62.2"
+    "rollup": "^4.62.2",
+    "rollup-plugin-esbuild": "^6.2.1"
   }
 }

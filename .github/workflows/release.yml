@@ -42,6 +42,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build packages
+        run: pnpm -r build
+
       - name: Publish to npm
         run: pnpm -r --filter @bc-studio/oauth-core --filter @bc-studio/oauth-resource-client publish --no-git-checks
         env:
@@ -64,7 +67,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build script
-        run: STUDIO_OAUTH_VERSION="${GITHUB_REF_NAME#v}" pnpm --filter @bc-studio/oauth-mod build
+        run: STUDIO_OAUTH_VERSION="${GITHUB_REF_NAME#v}" pnpm -r build
 
       - name: Attach script to GitHub Release
         uses: softprops/action-gh-release@v2

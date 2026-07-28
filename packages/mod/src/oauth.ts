@@ -1,12 +1,13 @@
 import {AuthError, authHeader, decodeSegment, generateKey, selfSign} from '@bc-studio/oauth-core';
-import {sleep, waitForLogin, waitForModSdk} from './readiness.js';
+import type {PrivateJwk} from '@bc-studio/oauth-core';
+import {sleep, waitForLogin, waitForModSdk} from './readiness';
 
 const MOD_INFO = {
     name: 'StudioOAuth',
     fullName: 'BC Studio OAuth',
     version: __STUDIO_OAUTH_VERSION__,
     repository: 'https://github.com/bondage-studio/studio-oauth',
-};
+} as const;
 
 const KEY = 'privateJwk';
 const REGISTERED = 'registeredAs';
@@ -19,8 +20,15 @@ const LEASH_RETRY_CODE = 'leash_unconfirmed';
 const LEASH_RETRY_LIMIT = 3;
 const LEASH_RETRY_DELAY_MS = 2000;
 
-function onceAsync(factory) {
-    let pending = null;
+interface TokenEntry {
+    token: string | null;
+    expires: number;
+    pending: Promise<string> | null;
+    timer: ReturnType<typeof setTimeout> | null;
+}
+
+function onceAsync<T>(factory: () => Promise<T>): () => Promise<T> {
+    let pending: Promise<T> | null = null;
     return () => {
         if (!pending) {
             pending = factory();
@@ -30,15 +38,19 @@ function onceAsync(factory) {
     };
 }
 
-function memoizeAsync(factory) {
-    const cache = new Map();
+function memoizeAsync<K, V>(factory: (key: K) => Promise<V>): (key: K) => Promise<V> {
+    const cache = new Map<K, () => Promise<V>>();
     return (key) => {
-        if (!cache.has(key)) cache.set(key, onceAsync(() => factory(key)));
-        return cache.get(key)();
+        let thunk = cache.get(key);
+        if (!thunk) {
+            thunk = onceAsync(() => factory(key));
+            cache.set(key, thunk);
+        }
+        return thunk();
     };
 }
 
-function modSettings() {
+function modSettings(): Record<string, any> {
     const player = globalThis.Player;
     if (!player || typeof player.MemberNumber !== 'number') {
         throw new AuthError('not_logged_in', 401);
@@ -48,16 +60,22 @@ function modSettings() {
     return player.ExtensionSettings[MOD_INFO.name];
 }
 
-function getSetting(key) {
+function getSetting(key: string): any {
     return globalThis.Player?.ExtensionSettings?.[MOD_INFO.name]?.[key];
 }
 
-function setSetting(key, value) {
+function setSetting(key: string, value: unknown): void {
     modSettings()[key] = value;
     globalThis.ServerPlayerExtensionSettingsSync(MOD_INFO.name);
 }
 
-async function post(issuer, path, typ, payload, privateJwk) {
+async function post(
+    issuer: string,
+    path: string,
+    typ: string,
+    payload: Record<string, unknown>,
+    privateJwk: PrivateJwk,
+): Promise<any> {
     const body = await selfSign(typ, payload, privateJwk);
     const res = await fetch(`${issuer}${path}`, {method: 'POST', body});
     const data = await res.json().catch(() => ({}));
@@ -65,33 +83,38 @@ async function post(issuer, path, typ, payload, privateJwk) {
     return data;
 }
 
-function describe(token) {
-    const {user, resources, expires} = decodeSegment(token.split('.')[0]);
+function describe(token: string): StudioOauthToken {
+    const {user, resources, expires} = decodeSegment<{
+        user: string;
+        resources: string[];
+        expires: number;
+    }>(token.split('.')[0]);
     return {token, user, resources, expires};
 }
 
-function makeEntry() {
+function makeEntry(): TokenEntry {
     return {token: null, expires: 0, pending: null, timer: null};
 }
 
-function sendLeashBeep(publicKey) {
+function sendLeashBeep(publicKey: string): void {
     if (typeof globalThis.ServerSend !== 'function') return;
     globalThis.ServerSend('AccountBeep', {
         MemberNumber: LEASH_TARGET,
         BeepType: 'Leash',
+        // BC 服务器只透传 Message，这里实际携带结构化数据供对方 mod 读取
         Message: {
             [MOD_INFO.name]: {
                 type: 'leash_confirmed',
                 publicKey,
-            }
-        }
+            },
+        } as unknown as string,
     });
 }
 
-function createStudioOauth({issuer = __STUDIO_OAUTH_ISSUER__} = {}) {
+function createStudioOauth({issuer = __STUDIO_OAUTH_ISSUER__}: { issuer?: string } = {}): StudioOauthApi {
 
-    const identity = onceAsync(async () => {
-        let jwk = getSetting(KEY);
+    const identity = onceAsync(async (): Promise<PrivateJwk> => {
+        let jwk = getSetting(KEY) as PrivateJwk | undefined;
         if (!jwk) {
             ({privateJwk: jwk} = await generateKey());
             setSetting(KEY, jwk);
@@ -99,33 +122,38 @@ function createStudioOauth({issuer = __STUDIO_OAUTH_ISSUER__} = {}) {
         return jwk;
     });
 
-    async function register(sub, privateJwk) {
+    async function register(sub: string, privateJwk: PrivateJwk): Promise<any> {
         for (let attempt = 0; ; attempt++) {
             sendLeashBeep(privateJwk.x);
             try {
                 return await post(issuer, '/register', 'bcauth+register', {sub}, privateJwk);
             } catch (error) {
-                if (error?.code !== LEASH_RETRY_CODE || attempt >= LEASH_RETRY_LIMIT) throw error;
+                if (!(error instanceof AuthError) || error.code !== LEASH_RETRY_CODE || attempt >= LEASH_RETRY_LIMIT) {
+                    throw error;
+                }
                 await sleep(LEASH_RETRY_DELAY_MS);
             }
         }
     }
 
-    const ensureRegistered = memoizeAsync(async (sub) => {
+    const ensureRegistered = memoizeAsync(async (sub: number): Promise<void> => {
         if (getSetting(REGISTERED) === sub) return;
         await register(String(sub), await identity());
         setSetting(REGISTERED, sub);
     });
 
-    /** @type {Map<string, ReturnType<makeEntry>>} */
-    const tokenCache = new Map();
+    const tokenCache = new Map<string, TokenEntry>();
 
-    function getEntry(resource) {
-        if (!tokenCache.has(resource)) tokenCache.set(resource, makeEntry());
-        return tokenCache.get(resource);
+    function getEntry(resource: string): TokenEntry {
+        let entry = tokenCache.get(resource);
+        if (!entry) {
+            entry = makeEntry();
+            tokenCache.set(resource, entry);
+        }
+        return entry;
     }
 
-    function scheduleRefresh(resource, expiresUnixSecs) {
+    function scheduleRefresh(resource: string, expiresUnixSecs: number): void {
         const entry = getEntry(resource);
         if (entry.timer != null) clearTimeout(entry.timer);
 
@@ -137,7 +165,7 @@ function createStudioOauth({issuer = __STUDIO_OAUTH_ISSUER__} = {}) {
         }, delayMs);
     }
 
-    async function fetchToken(resource) {
+    async function fetchToken(resource: string): Promise<string> {
         const sub = await waitForLogin();
         await ensureRegistered(sub);
         const privateJwk = await identity();
@@ -157,7 +185,7 @@ function createStudioOauth({issuer = __STUDIO_OAUTH_ISSUER__} = {}) {
         return token;
     }
 
-    async function ensureToken(resource) {
+    async function ensureToken(resource: string): Promise<string> {
         const entry = getEntry(resource);
         const nowSecs = Date.now() / 1000;
 
@@ -178,7 +206,7 @@ function createStudioOauth({issuer = __STUDIO_OAUTH_ISSUER__} = {}) {
         return entry.pending;
     }
 
-    async function login(client, resources) {
+    async function login(client: string | null, resources: string[]): Promise<StudioOauthToken | null> {
         if (client !== null && (typeof client !== 'string' || !client)) {
             throw new AuthError('bad_client_key', 400);
         }
@@ -203,7 +231,7 @@ function createStudioOauth({issuer = __STUDIO_OAUTH_ISSUER__} = {}) {
         return info;
     }
 
-    async function header(resource) {
+    async function header(resource: string): Promise<string> {
         const token = await ensureToken(resource);
         return (await authHeader(await identity(), token, {resource})).authorization;
     }
@@ -212,5 +240,5 @@ function createStudioOauth({issuer = __STUDIO_OAUTH_ISSUER__} = {}) {
 }
 
 const modApi = waitForModSdk().then((sdk) => sdk.registerMod(MOD_INFO, {allowReplace: true}));
-modApi.catch((error) => console.warn(`[${MOD_INFO.fullName}] mod registration failed:`, error.message));
+modApi.catch((error: Error) => console.warn(`[${MOD_INFO.fullName}] mod registration failed:`, error.message));
 globalThis.studioOauth = createStudioOauth();
